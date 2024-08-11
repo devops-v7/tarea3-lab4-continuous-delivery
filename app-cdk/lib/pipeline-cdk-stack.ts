@@ -5,6 +5,7 @@ import * as codepipeline_actions from "aws-cdk-lib/aws-codepipeline-actions";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import * as codebuild from "aws-cdk-lib/aws-codebuild";
 
+
 export class PipelineCdkStack extends Stack {
   constructor(scope: Construct, id: string, props: StackProps) {
     super(scope, id, props);
@@ -22,8 +23,19 @@ export class PipelineCdkStack extends Stack {
       crossAccountKeys: false,
     });
 
+    // Define el proyecto de CodeBuild
+    const codeBuild = new codebuild.PipelineProject(this, "CodeBuild", {
+      buildSpec: codebuild.BuildSpec.fromSourceFilename("buildspec_test.yml"), // Especifica el archivo buildspec
+      environment: {
+        buildImage: codebuild.LinuxBuildImage.STANDARD_7_0,
+        privileged: true,
+        computeType: codebuild.ComputeType.LARGE,
+      },
+    });
+
     // Define los artefactos de salida
     const sourceOutput = new codepipeline.Artifact();
+    const unitTestOutput = new codepipeline.Artifact();
     const buildOutput = new codepipeline.Artifact();
 
     // Agrega la etapa de origen con GitHub
@@ -37,6 +49,19 @@ export class PipelineCdkStack extends Stack {
           branch: "main", // Rama principal del repositorio
           oauthToken: githubSecret.secretValue, // Token de acceso de GitHub
           output: sourceOutput,
+        }),
+      ],
+    });
+
+    // Agrega la etapa de construcción y pruebas
+    pipeline.addStage({
+      stageName: "Code-Quality-Testing",
+      actions: [
+        new codepipeline_actions.CodeBuildAction({
+          actionName: "Unit-Test",
+          project: codeBuild,
+          input: sourceOutput,
+          outputs: [unitTestOutput],
         }),
       ],
     });
