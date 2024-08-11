@@ -24,19 +24,20 @@ export class PipelineCdkStack extends Stack {
     });
 
     // Define el proyecto de CodeBuild
-    const codeBuild = new codebuild.PipelineProject(this, "CodeBuild", {
-      buildSpec: codebuild.BuildSpec.fromSourceFilename("buildspec_test.yml"), // Especifica el archivo buildspec
-      environment: {
-        buildImage: codebuild.LinuxBuildImage.STANDARD_7_0,
-        privileged: true,
-        computeType: codebuild.ComputeType.LARGE,
-      },
-    });
+    const codeBuild = new codebuild.PipelineProject( this, 'CodeBuild', {
+        environment: {
+          buildImage: codebuild.LinuxBuildImage.STANDARD_7_0,
+          privileged: true,
+          computeType: codebuild.ComputeType.LARGE,
+        },
+        buildSpec: codebuild.BuildSpec.fromSourceFilename('buildspec_test.yml'),
+      }
+    );
 
     // Define los artefactos de salida
     const sourceOutput = new codepipeline.Artifact();
     const unitTestOutput = new codepipeline.Artifact();
-    const buildOutput = new codepipeline.Artifact();
+    //const buildOutput = new codepipeline.Artifact();
 
     // Agrega la etapa de origen con GitHub
     pipeline.addStage({
@@ -66,37 +67,9 @@ export class PipelineCdkStack extends Stack {
       ],
     });
 
-    // Define un proyecto de construcción de CodeBuild
-    const buildProject = new codebuild.PipelineProject(this, "BuildProject", {
-      buildSpec: codebuild.BuildSpec.fromObject({
-        version: "0.2",
-        phases: {
-          install: {
-            commands: ["npm install"],
-          },
-          build: {
-            commands: ["npm run build"],
-          },
-        },
-        artifacts: {
-          "base-directory": "dist", // Ajusta según la estructura de tu proyecto
-          files: ["**/*"],
-        },
-      }),
-    });
 
-    // Agrega la etapa de construcción
-    pipeline.addStage({
-      stageName: "Build",
-      actions: [
-        new codepipeline_actions.CodeBuildAction({
-          actionName: "CodeBuild",
-          project: buildProject,
-          input: sourceOutput,
-          outputs: [buildOutput],
-        }),
-      ],
-    });
+
+  
 
     // Salida de la URL del repositorio
     new CfnOutput(this, "RepositoryUrl", {
