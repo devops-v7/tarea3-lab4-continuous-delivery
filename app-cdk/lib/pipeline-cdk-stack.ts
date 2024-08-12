@@ -15,6 +15,8 @@ import * as subscriptions from "aws-cdk-lib/aws-sns-subscriptions";
 import * as targets from "aws-cdk-lib/aws-events-targets";
 import { Rule, EventPattern } from "aws-cdk-lib/aws-events";
 import * as events from "aws-cdk-lib/aws-events";
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as cloudwatch_actions from 'aws-cdk-lib/aws-cloudwatch-actions';
 
 interface ConsumerProps extends StackProps {
   ecrRepository: ecr.Repository;
@@ -281,9 +283,51 @@ export class PipelineCdkStack extends Stack {
         ],
       ],
     });
+    // Add the Lambda function that will call Slack Webhook
+    const alarmToSlackLambda = new lambda.Function(this, 'AlarmToSlackLambda', {
+        runtime: lambda.Runtime.PYTHON_3_8,
+        code: lambda.Code.fromAsset('lib/'),
+        handler: 'index.lambda_handler',
+        environment: {
+          SLACK_WEBHOOK_URL: 'https://hooks.slack.com/services/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',
+        },
+      });
+
+    // Create the CloudWatch Alarm
+    const alarm = new cloudwatch.Alarm(this,'Alarm', {
+        alarmName: 'MyAlarm',
+        metric: new cloudwatch.Metric({
+          namespace: "AWS/CodeBuild",
+          metricName: "QueuedDuration",
+          statistic: 'avg',
+          label: 'Duration'
+        }),
+        threshold: 100,
+        evaluationPeriods: 1,
+        datapointsToAlarm: 1
+        
+      });
+
+        // Create the SNS topic
+        const topic = new sns.Topic(this, 'CloudWatchAlarmTopic');
+
+        // Add a subscription to the Lambda function
+        topic.addSubscription(new subscriptions.LambdaSubscription(alarmToSlackLambda));
+       
+        // Add the SNS topic as an action for alarm state
+        alarm.addAlarmAction(new cloudwatch_actions.SnsAction(topic));
+       
+        // Optional - Add the AlarmName as output to reference later during testing
+        new CfnOutput(this, "AlarmName", {
+          value: alarm.alarmName
+        }); 
+
     const failureTopic = new sns.Topic(this, "BuildFailure", {
       displayName: "BuildFailure",
     });
+    failureTopic.addSubscription(
+        new subscriptions.LambdaSubscription(alarmToSlackLambda)
+      );
     const emailSubscription = new subscriptions.EmailSubscription(
       "rodrigo.orellana.rivera@gmail.com"
     );
