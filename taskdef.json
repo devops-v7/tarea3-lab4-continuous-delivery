@@ -1,0 +1,24 @@
+{
+    "executionRoleArn": "arn:aws:iam::697830474638:role/prod-app-stack-prodFargateServiceTaskDefExecutionRo-F9CO3QcMdjaZ",
+    "containerDefinitions": [
+        {
+            "name": "my-app",
+            "image": "697830474638.dkr.ecr.us-east-1.amazonaws.com/ecr-stack-myapp4aca6506-kguhqqotcfof:latest",
+            "portMappings": [
+                {
+                    "containerPort": 8081,
+                    "hostPort": 8081,
+                    "protocol": "tcp"
+                }
+            ],
+            "essential": true
+        }
+    ],
+    "family": "prodappstackprodFargateServiceTaskDefE883E3CC",
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "networkMode": "awsvpc",
+    "cpu": "512",
+    "memory": "1024"
+}
